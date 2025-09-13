@@ -7,8 +7,9 @@ A scripts that exports markdown tables to csv which are then imported into anki 
 - A further processing to standardize column names and values, this ensures we "translate" to the formatting used in obsidian to what
  the note type in Anki expects. Structure is hard-coded.
 
-## how to run
-First, seed the environment variables as shown in `.env.example`. Then, just run `uv run python main.py`.
+## How to run
+First, seed the environment variables as shown in `.env.example`. Then, just run `uv run python main.py`. It will generate 
+a csv in the export directory. As final task, you must import the csv directly in Anki.
 
 ## Next steps?
 - Error trail. As the list of notes to import grows, how to make it easy to identify which notes could not be imported?
