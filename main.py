@@ -9,10 +9,11 @@ if __name__ == "__main__":
     
     OBSIDIAN_VAULT = Path(os.getenv("OBSIDIAN_VAULT"))
     EXPORT_DIR = Path(os.getenv("EXPORT_DIR"))
-    ANKI_TAG_PATTERN = r'#anki/(\w+)'
+    
+    ANKI_TAG = r'#anki/export'
     
     export_from_obsidian2anki(
-        ANKI_TAG_PATTERN,
+        ANKI_TAG,
         OBSIDIAN_VAULT,
         EXPORT_DIR
     )

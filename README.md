@@ -12,4 +12,6 @@ First, seed the environment variables as shown in `.env.example`. Then, just run
 a csv in the export directory. As final task, you must import the csv directly in Anki.
 
 ## Next steps?
+- Expose main params as arguments to be changed by the user.
 - Error trail. As the list of notes to import grows, how to make it easy to identify which notes could not be imported?
+- Use LLM to fill up rows with context null? powered

@@ -38,13 +38,31 @@ def traverse_directory(
 
         yield item
 
+def _match_tag_pattern(pattern, text):
+    """Check if the exact tag pattern exists in the text.
+    
+    Args:
+        pattern: The tag to look for (e.g., "#anki/export")
+        text: The text to search in
+        
+    Returns:
+        bool: True if exact tag is found, False otherwise
+    """
+    escaped_pattern = re.escape(pattern)
+    # Match tag when it:
+    # - starts at beginning of line or after whitespace
+    # - ends at end of line, or is followed by whitespace or newline
+    exact_pattern = f"(?:^|\\s){escaped_pattern}(?:$|\\s|\\n)"
+    
+    match = re.search(exact_pattern, text)
+    return bool(match)
 
 def find_files_with_tag(files, pattern):
     files_with_match = []
     files_with_error = []
     for file in files:
         try:
-            if re.search(pattern, file.read_text(encoding="utf-8")):
+            if _match_tag_pattern(pattern, file.read_text(encoding="utf-8")):
                 files_with_match.append(file)
         except Exception as e:
             # print(e)
@@ -153,5 +171,9 @@ def export_from_obsidian2anki(
     files_with_tag, files_with_error = find_files_with_tag(
         notes_files, anki_tag_pattern
     )
-    df = pd.concat([process_file(x) for x in files_with_tag], ignore_index=True)
-    save_cards(df, export_dir)
+    
+    if len(files_with_tag) > 0:
+        df = pd.concat([process_file(x) for x in files_with_tag], ignore_index=True)
+        save_cards(df, export_dir)
+    else:
+        print('No files found')
