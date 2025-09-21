@@ -116,17 +116,40 @@ def convert_highlight_to_html(text: str, html_tag="mark") -> str:
     # Replace all matches
     return re.sub(pattern, replacement, text)
 
+def _standardize_schema(df: pd.DataFrame):
+    CORE_COLUMNS = [
+        'Texto',
+        'Contexto',
+        'Traducción',
+        'Notas',
+    ]
 
-def clean_table(raw_table: pd.DataFrame) -> pd.DataFrame:
+    OPTIONAL_COLUMN = 'Omitir'
+    n_columns = len(df.columns)
+    if n_columns == 4:
+        df = df.assign(**{OPTIONAL_COLUMN: None})
+    return (
+        df
+        .iloc[:, :5]
+        .set_axis(CORE_COLUMNS + [OPTIONAL_COLUMN], axis='columns')
+    )
+
+
+def clean_table(df: pd.DataFrame) -> pd.DataFrame:
     """Define here the expected schema of the notes.
     Returns:
         _type_: _description_
     """
-    STANDARD_COLUMNS = ["Texto", "Contexto", "Traducción", "Notas"]
 
-    return raw_table.set_axis(STANDARD_COLUMNS, axis="columns").assign(
-        Texto=lambda df: df["Texto"].apply(convert_to_cloze),
-        Traducción=lambda df: df["Traducción"].apply(convert_highlight_to_html),
+    return (
+        df
+        .pipe(_standardize_schema)
+        .loc[lambda df: df['Omitir'].isna()]
+        .assign(
+            Texto = lambda df: df['Texto'].apply(convert_to_cloze),
+            Traducción = lambda df: df['Traducción'].apply(convert_highlight_to_html)
+        )
+        .iloc[:, :4]
     )
 
 
@@ -149,13 +172,16 @@ def process_file(note_file: Path) -> pd.DataFrame:
         except Exception as e:
             print(f"Error processing {note_file} with error", e)
 
-    return pd.concat(clean_tables, ignore_index=True)
+    clean_tables = pd.concat(clean_tables, ignore_index=True)
+    print(f'Found {clean_tables.shape[0]} notes')
+    return clean_tables
 
 
-def save_cards(df: pd.DataFrame, export_dir: Path):
-    filename = f"obsidian2anki_export__{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+
+
+def save_cards(df: pd.DataFrame, export_dir: Path, filename:str):
     try:
-        (df.to_csv(export_dir / filename, index=False, header=False))
+        (df.to_csv(export_dir / f"{filename}.csv", index=False, header=False))
         print(f"file {filename} succesfully written")
     except Exception as e:
         print("Error saving data", e)
@@ -165,6 +191,7 @@ def export_from_obsidian2anki(
     anki_tag_pattern: str, obsidian_dir: str | Path, export_dir: str
 ):
     print("Begin export from obsidian to anki")
+    export_tag = f"obsidian2anki_export__{datetime.now().strftime('%Y%m%d_%H%M')}"
     notes_files = traverse_directory(
         obsidian_dir, pattern="*.md", skip_dirs=[".obsidian"]
     )
@@ -173,7 +200,22 @@ def export_from_obsidian2anki(
     )
     
     if len(files_with_tag) > 0:
-        df = pd.concat([process_file(x) for x in files_with_tag], ignore_index=True)
-        save_cards(df, export_dir)
+        clean_files = []
+        for note_file in files_with_tag:
+            try:
+                clean_files.append(process_file(note_file))
+            except Exception as e:
+                print(f"Error processing {note_file} with error:", e) 
+        
+        if len(clean_files) == 0:
+            raise ValueError('No files found')      
+        
+        df = (
+            pd.concat(clean_files, ignore_index=True)
+            .assign(
+                anki_tag = export_tag
+            )
+        )        
+        save_cards(df, export_dir, export_tag)
     else:
         print('No files found')
